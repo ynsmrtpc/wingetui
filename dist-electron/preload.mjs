@@ -16,9 +16,7 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
   invoke(...args) {
     const [channel, ...omit] = args;
     return electron.ipcRenderer.invoke(channel, ...omit);
-  },
-  getAppList: () => electron.ipcRenderer.invoke('getAppList')
+  }
   // You can expose other APTs you need here.
   // ...
 });
-

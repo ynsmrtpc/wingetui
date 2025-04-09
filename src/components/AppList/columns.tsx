@@ -3,6 +3,7 @@ import { ColumnDef } from "@tanstack/react-table"
 export type AppInfo = {
     name: string;
     version: string;
+    newVersion: string;
 }
 
 export const columns: ColumnDef<AppInfo>[] = [
@@ -13,5 +14,9 @@ export const columns: ColumnDef<AppInfo>[] = [
     {
         accessorKey: "version",
         header: "Sürüm",
+    },
+    {
+        accessorKey: "newVersion",
+        header: "Yeni Sürüm",
     },
 ]

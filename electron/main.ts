@@ -30,7 +30,10 @@ let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    width: 1200,
+    height: 830,
+    resizable: true,
+    icon: path.join(process.env.VITE_PUBLIC, 'icon.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
@@ -54,7 +57,8 @@ function createWindow() {
               const parts = line.split(/\s{2,}/)
               return {
                 name: parts[0],
-                version: parts[1] || '',
+                version: parts[2] || '',
+                newVersion: parts[3] || "",
               }
             })
         resolve(apps)
