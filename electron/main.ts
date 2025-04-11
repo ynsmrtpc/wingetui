@@ -1,10 +1,9 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, screen } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { ipcMain } from 'electron'
-import {exec} from "child_process";
-import os from 'os'
+import { IpcHandlerService } from './services/ipc-handlers'
+
 createRequire(import.meta.url);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -40,40 +39,9 @@ function createWindow() {
     },
   })
 
-  // 'getAppList' mesajını dinle
-  ipcMain.handle('getAppList', async () => {
-    return new Promise((resolve, reject) => {
-      exec('winget list --source winget', (error, stdout, stderr) => {
-        if (error) {
-          console.error('Winget Error:', stderr)
-          return reject(stderr)
-        }
-
-        const lines = stdout.split('\n').slice(2)
-        const apps = lines
-            .map(line => line.trim())
-            .filter(line => line.length > 0)
-            .map(line => {
-              const parts = line.split(/\s{2,}/)
-              return {
-                name: parts[0],
-                version: parts[2] || '',
-                newVersion: parts[3] || "",
-              }
-            })
-        resolve(apps)
-      })
-    })
-  })
-
-  ipcMain.handle('getSystemInfo', async () => {
-    return {
-      cpu: os.cpus()[0].model,
-      ram: `${(os.totalmem() / 1024 / 1024 / 1024).toFixed(2)} GB`,
-      os: `${os.type()} ${os.arch()}`,
-      version: os.release(),
-    }
-  })
+  // IPC mesaj işleyicilerini kaydet
+  const ipcHandlerService = new IpcHandlerService();
+  ipcHandlerService.registerHandlers();
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {

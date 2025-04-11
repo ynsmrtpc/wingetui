@@ -1,12 +1,26 @@
-import {Home, LayoutGrid} from "lucide-react";
+import { Cog, Home, LayoutGrid } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-const SidebarData = () => {
-    return {
-        nav: [
-            { name: "Home", icon: Home, to: "/"},
-            { name: "Apps", icon: LayoutGrid, to: "/apps"},
-        ],
-    }
-}
-
-export { SidebarData };
+export const SidebarData = () => {
+  const { t } = useTranslation();
+  
+  return {
+    nav: [
+      {
+        title: t('common.home'),
+        href: "/",
+        icon: Home,
+      },
+      {
+        title: t('common.apps'),
+        href: "/apps",
+        icon: LayoutGrid,
+      },
+      {
+        title: t('common.settings'),
+        href: "/settings",
+        icon: Cog,
+      }
+    ]
+  };
+};

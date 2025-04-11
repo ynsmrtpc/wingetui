@@ -8,6 +8,7 @@ import {
     getSortedRowModel,
     ColumnFiltersState,
     getFilteredRowModel,
+    RowSelectionState,
 } from "@tanstack/react-table";
 import {
     Table,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {ReactNode, useState} from "react";
+import { ReactNode, useState } from "react";
 import {
     Select,
     SelectContent,
@@ -49,21 +50,26 @@ interface DataTableProps<TData, TValue> {
     filterColumnKey?: string;
     filterOptions?: DataTableFilterOption[];
     pageSize?: number;
-    children: ReactNode;
+    children?: ReactNode;
+    rowSelection?: boolean;
+    onRowSelectionChange?: (rowSelection: RowSelectionState) => void;
 }
 
 export function DataTable<TData, TValue>({
-                                             columns,
-                                             data,
-                                             searchKey,
-                                             searchPlaceholder = "Ara...",
-                                             filterColumnKey,
-                                             filterOptions,
-                                             pageSize = 25,
-                                             children
-                                         }: DataTableProps<TData, TValue>) {
+    columns,
+    data,
+    searchKey,
+    searchPlaceholder = "Ara...",
+    filterColumnKey,
+    filterOptions,
+    pageSize = 25,
+    children,
+    rowSelection = false,
+    onRowSelectionChange,
+}: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+    const [rowSelectionState, setRowSelectionState] = useState<RowSelectionState>({});
 
     const table = useReactTable({
         data,
@@ -74,9 +80,26 @@ export function DataTable<TData, TValue>({
         getSortedRowModel: getSortedRowModel(),
         onColumnFiltersChange: setColumnFilters,
         getFilteredRowModel: getFilteredRowModel(),
+        enableRowSelection: rowSelection,
+        onRowSelectionChange: (updaterOrValue) => {
+            let updatedRowSelection: RowSelectionState;
+
+            if (typeof updaterOrValue === 'function') {
+                updatedRowSelection = updaterOrValue(rowSelectionState);
+            } else {
+                updatedRowSelection = updaterOrValue;
+            }
+
+            setRowSelectionState(updatedRowSelection);
+
+            if (onRowSelectionChange) {
+                onRowSelectionChange(updatedRowSelection);
+            }
+        },
         state: {
             sorting,
             columnFilters,
+            rowSelection: rowSelectionState,
         },
         initialState: {
             pagination: {
@@ -87,42 +110,45 @@ export function DataTable<TData, TValue>({
 
     return (
         <>
-            <div className="flex items-center pb-4 space-x-2">
-                {searchKey && (
-                   <section className="flex items-center justify-between w-full">
-                       <Input
-                           placeholder={searchPlaceholder}
-                           value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
-                           onChange={(event) =>
-                               table.getColumn(searchKey)?.setFilterValue(event.target.value)
-                           }
-                           className="max-w-md sm:w-96"
-                       />
-                       {children}
-                   </section>
-                )}
-                {filterColumnKey && filterOptions && (
-                    <Select
-                        value={(table.getColumn(filterColumnKey)?.getFilterValue() as string) ?? "all"}
-                        onValueChange={(value) => {
-                            const filterValue = value === "all" ? null : value;
-                            table.getColumn(filterColumnKey)?.setFilterValue(filterValue);
-                        }}
-                    >
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Duruma göre filtrele" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Tümü</SelectItem>
-                            {filterOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                )}
-            </div>
+            {(searchKey || filterColumnKey || filterOptions || children) && (
+                <div className="flex items-center pb-4 space-x-2">
+                    {searchKey && (
+                        <section className="flex items-center justify-between w-full">
+                            <Input
+                                placeholder={searchPlaceholder}
+                                value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
+                                onChange={(event) =>
+                                    table.getColumn(searchKey)?.setFilterValue(event.target.value)
+                                }
+                                className="max-w-md sm:w-96"
+                            />
+                            {children}
+                        </section>
+                    )}
+                    {!searchKey && children}
+                    {filterColumnKey && filterOptions && (
+                        <Select
+                            value={(table.getColumn(filterColumnKey)?.getFilterValue() as string) ?? "all"}
+                            onValueChange={(value) => {
+                                const filterValue = value === "all" ? null : value;
+                                table.getColumn(filterColumnKey)?.setFilterValue(filterValue);
+                            }}
+                        >
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Duruma göre filtrele" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tümü</SelectItem>
+                                {filterOptions.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
+            )}
             <div className="rounded-md border">
                 <Table>
                     <TableHeader>
@@ -130,7 +156,10 @@ export function DataTable<TData, TValue>({
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
                                     return (
-                                        <TableHead key={header.id}>
+                                        <TableHead
+                                            key={header.id}
+                                            className={header.column.id === 'select' ? 'w-[30px] p-2' : ''}
+                                        >
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
@@ -153,25 +182,37 @@ export function DataTable<TData, TValue>({
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
-                                            className="max-w-96 w-full"
+                                            className={`${cell.column.id === 'select' ? 'w-[30px] p-2' : 'max-w-96 w-full'}`}
                                         >
-                                            <TooltipProvider>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <div className="truncate max-w-96">
-                                                            {flexRender(
-                                                                cell.column.columnDef.cell,
-                                                                cell.getContext()
-                                                            )}
-                                                        </div>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                          <span>
-                                                            {String(cell.getValue() || "")}
-                                                          </span>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
+                                            {cell.column.id !== 'select'
+                                                ? (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <div className={`${cell.column.id === 'select' ? '' : 'truncate max-w-96'}`}>
+                                                                    {flexRender(
+                                                                        cell.column.columnDef.cell,
+                                                                        cell.getContext()
+                                                                    )}
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <span>
+                                                                    {String(cell.getValue() || "")}
+                                                                </span>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                ) : (
+                                                    <div className={`${cell.column.id === 'select' ? '' : 'truncate max-w-96'}`}>
+                                                        {flexRender(
+                                                            cell.column.columnDef.cell,
+                                                            cell.getContext()
+                                                        )}
+                                                    </div>
+                                                )
+                                            }
+
                                         </TableCell>
                                     ))}
                                 </TableRow>
@@ -193,13 +234,13 @@ export function DataTable<TData, TValue>({
             <div className="flex items-center justify-between space-x-2 py-4">
                 <div className="flex-1 text-sm text-muted-foreground">
                     {table.getFilteredRowModel().rows.length} kayıttan {
-                    table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1
-                }-{
-                    Math.min(
-                        (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-                        table.getFilteredRowModel().rows.length
-                    )
-                } arası gösteriliyor.
+                        table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1
+                    }-{
+                        Math.min(
+                            (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                            table.getFilteredRowModel().rows.length
+                        )
+                    } arası gösteriliyor.
                 </div>
                 <div className="space-x-2">
                     <Button
