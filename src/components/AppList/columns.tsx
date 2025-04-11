@@ -3,7 +3,6 @@ import { ColumnDef } from "@tanstack/react-table"
 export type AppInfo = {
     name: string;
     version: string;
-    newVersion: string;
 }
 
 export const columns: ColumnDef<AppInfo>[] = [

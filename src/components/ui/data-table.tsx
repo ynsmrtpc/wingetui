@@ -28,6 +28,14 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
+
+
 interface DataTableFilterOption {
     label: string;
     value: string;
@@ -143,11 +151,27 @@ export function DataTable<TData, TValue>({
                                     data-state={row.getIsSelected() && "selected"}
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
+                                        <TableCell
+                                            key={cell.id}
+                                            className="max-w-96 w-full"
+                                        >
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="truncate max-w-96">
+                                                            {flexRender(
+                                                                cell.column.columnDef.cell,
+                                                                cell.getContext()
+                                                            )}
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                          <span>
+                                                            {String(cell.getValue() || "")}
+                                                          </span>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         </TableCell>
                                     ))}
                                 </TableRow>
@@ -163,6 +187,7 @@ export function DataTable<TData, TValue>({
                             </TableRow>
                         )}
                     </TableBody>
+
                 </Table>
             </div>
             <div className="flex items-center justify-between space-x-2 py-4">

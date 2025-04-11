@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { ipcMain } from 'electron'
 import {exec} from "child_process";
+import os from 'os'
 createRequire(import.meta.url);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -39,7 +40,6 @@ function createWindow() {
     },
   })
 
-
   // 'getAppList' mesajını dinle
   ipcMain.handle('getAppList', async () => {
     return new Promise((resolve, reject) => {
@@ -64,6 +64,15 @@ function createWindow() {
         resolve(apps)
       })
     })
+  })
+
+  ipcMain.handle('getSystemInfo', async () => {
+    return {
+      cpu: os.cpus()[0].model,
+      ram: `${(os.totalmem() / 1024 / 1024 / 1024).toFixed(2)} GB`,
+      os: `${os.type()} ${os.arch()}`,
+      version: os.release(),
+    }
   })
 
   // Test active push message to Renderer-process.
