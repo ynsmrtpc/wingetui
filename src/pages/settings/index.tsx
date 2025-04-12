@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CogIcon, Languages, MoonIcon, SunIcon, PowerIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -125,7 +125,7 @@ const Settings = () => {
                     </div>
 
                     {/* Gelişmiş Ayarlar */}
-                    <div className="pt-4 border-t space-y-4">
+                    <div className="pt-4 border-t space-y-4 hidden">
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-medium">{t('settings.advanced')}</h3>
                         </div>

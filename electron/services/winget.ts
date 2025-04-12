@@ -91,7 +91,7 @@ export class WingetService {
         return this.generateMockData();
       }
       
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         // Komut çalışma timeout'u ekle
         const timeout = setTimeout(() => {
           console.error('Winget command timed out');
@@ -121,6 +121,7 @@ export class WingetService {
                 }
                 return {
                   name: parts[0] || 'Unknown App',
+                  id: parts[1],
                   version: parts[2] || '',
                   newVersion: parts[3] || "",
                 };
@@ -157,7 +158,7 @@ export class WingetService {
           .map(app => ({ ...app, id: app.name.replace(/\s+/g, '.').toLowerCase() }));
       }
       
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         // Komut çalışma timeout'u ekle
         const timeout = setTimeout(() => {
           console.error('Winget search command timed out');

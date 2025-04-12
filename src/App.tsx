@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router-dom";
-import { WingetUIComponent } from "@/components/WingetUIComponent.tsx";
+import { CustomSidebar } from "@/components/CustomSidebar.tsx";
 import Home from "@/pages/home";
 import Apps from "@/pages/apps";
 import Settings from "@/pages/settings";
@@ -12,9 +12,9 @@ function App() {
         <>
             <Toaster />
             <Routes>
-                <Route path="/" element={<WingetUIComponent><Home /></WingetUIComponent>} />
-                <Route path="/apps" element={<WingetUIComponent><Apps /></WingetUIComponent>} />
-                <Route path="/settings" element={<WingetUIComponent><Settings /></WingetUIComponent>} />
+                <Route path="/" element={<CustomSidebar><Home /></CustomSidebar>} />
+                <Route path="/apps" element={<CustomSidebar><Apps /></CustomSidebar>} />
+                <Route path="/settings" element={<CustomSidebar><Settings /></CustomSidebar>} />
             </Routes>
         </>
     );

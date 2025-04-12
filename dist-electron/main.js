@@ -28600,7 +28600,7 @@ class WingetService {
         console.warn("Winget not available, returning mock data");
         return this.generateMockData();
       }
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const timeout = setTimeout(() => {
           console.error("Winget command timed out");
           resolve(this.generateMockData());
@@ -28621,6 +28621,7 @@ class WingetService {
               }
               return {
                 name: parts[0] || "Unknown App",
+                id: parts[1],
                 version: parts[2] || "",
                 newVersion: parts[3] || ""
               };
@@ -28649,7 +28650,7 @@ class WingetService {
         console.warn("Winget not available, returning filtered mock data");
         return this.mockApps.filter((app2) => app2.name.toLowerCase().includes(keyword.toLowerCase())).map((app2) => ({ ...app2, id: app2.name.replace(/\s+/g, ".").toLowerCase() }));
       }
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         const timeout = setTimeout(() => {
           console.error("Winget search command timed out");
           resolve(this.mockApps.filter((app2) => app2.name.toLowerCase().includes(keyword.toLowerCase())).map((app2) => ({ ...app2, id: app2.name.replace(/\s+/g, ".").toLowerCase() })));

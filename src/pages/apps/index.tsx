@@ -34,12 +34,10 @@ async function getData(): Promise<{ data: AppInfo[], error?: string }> {
                 error: 'Unexpected response format from getAppList'
             };
         }
-
         // Her uygulamaya benzersiz bir ID atayalım
         return {
-            data: data.map((app: any, index: number) => ({
+            data: data.map((app) => ({
                 ...app,
-                id: app.id || `app-${index}`,
                 selected: false,
             }))
         };
@@ -55,9 +53,6 @@ async function getData(): Promise<{ data: AppInfo[], error?: string }> {
 // Seçilen uygulamaları güncelleyen fonksiyon
 async function updateSelectedApps(selectedApps: AppInfo[]): Promise<void> {
     try {
-        // Burada gerçekte API'ye seçili uygulamaları göndereceğiz
-        console.log("Güncellenecek uygulamalar:", selectedApps);
-
         // Her bir seçili uygulama için update çağrısı yapabiliriz
         for (const app of selectedApps) {
             await window.ipcRenderer.invoke('updateApp', app.id || app.name);
@@ -80,11 +75,11 @@ const Apps = () => {
     const [selectedApps, setSelectedApps] = useState<AppInfo[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [wingetMissing, setWingetMissing] = useState<boolean>(false);
+    const [tab, setTab] = useState("all")
 
     const [stats, setStats] = useState({
         total: 0,
         updatable: 0,
-        recentlyUpdated: 0
     });
 
     // Tabloyu oluştur (çeviri desteğiyle)
@@ -114,7 +109,6 @@ const Apps = () => {
             setStats({
                 total: result.data.length,
                 updatable: updatableCount,
-                recentlyUpdated: Math.floor(Math.random() * 5) // Örnek değer
             });
         } catch (error) {
             console.error('Uygulama listesi yüklenirken hata:', error);
@@ -157,13 +151,11 @@ const Apps = () => {
             toast.success(t('apps.updateStarted'), {
                 description: t('apps.appsStartedUpdating', { count: selectedApps.length })
             });
-            // Gerçek bir uygulamada, güncelleme tamamlandıktan sonra 
             // verileri yeniden yükleyebiliriz
-            setTimeout(() => {
-                getDataFromData();
+                await getDataFromData();
                 setUpdatingApps(false);
                 setSelectedApps([]);
-            }, 2000);
+                setTab(tab);
         } catch (error) {
             toast.error(t('apps.updateFailed'), {
                 description: t('apps.errorUpdatingApps')
@@ -175,6 +167,10 @@ const Apps = () => {
     useEffect(() => {
         getDataFromData();
     }, []);
+
+    useEffect(() => {
+        setSelectedApps([]);
+    }, [tab]);
 
     // Arama ile filtrelenmiş veri
     const filteredData = data ? data.filter(app =>
@@ -188,15 +184,12 @@ const Apps = () => {
 
     // Seçilen satırların yönetimi
     const onRowSelectionChange = (rowSelection: RowSelectionState) => {
-        if (!data) return;
-
-        const selectedRows = Object.keys(rowSelection).map((index) => {
-            const dataIndex = parseInt(index, 10);
-            return filteredData[dataIndex];
-        });
-
+        const source = tab === "updates" ? updatableApps : filteredData;
+        const selectedRows = Object.keys(rowSelection)
+            .map(index => source[parseInt(index, 10)]);
         setSelectedApps(selectedRows);
     };
+
 
     // Winget uyarı mesajını göster
     const renderWingetWarning = () => {
@@ -215,7 +208,7 @@ const Apps = () => {
 
     return (
         <div className="space-y-6 px-1">
-            <Tabs defaultValue="all" className="w-full">
+            <Tabs  value={tab} onValueChange={setTab} className="w-full">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
                     <TabsList className="mb-2 md:mb-0">
                         <TabsTrigger value="all" className="flex items-center gap-2">
@@ -263,41 +256,6 @@ const Apps = () => {
                     </Alert>
                 )}
 
-                {selectedApps.length > 0 && (
-                    <div className="bg-secondary/20 p-3 rounded-lg mb-4 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <Check className="h-5 w-5 text-primary" />
-                            <span className="font-medium">{t('apps.appsSelected', { count: selectedApps.length })}</span>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedApps([])}
-                            >
-                                {t('apps.clearSelection')}
-                            </Button>
-                            <Button
-                                variant="default"
-                                size="sm"
-                                onClick={updateSelected}
-                                disabled={updatingApps}
-                            >
-                                {updatingApps ? (
-                                    <>
-                                        <Loader className="h-3.5 w-3.5 mr-1 animate-spin" />
-                                        {t('apps.updating')}
-                                    </>
-                                ) : (
-                                    <>
-                                        <Download className="h-3.5 w-3.5 mr-1" />
-                                        {t('apps.updateSelected')}
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                )}
 
                 <Card className="shadow-md mb-4">
                     <CardHeader className="pb-2">
@@ -307,26 +265,19 @@ const Apps = () => {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="flex items-center p-4 bg-primary/10 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 cursor-pointer">
+                            <div onClick={() => setTab("all")} className={`flex items-center p-4 rounded-lg border ${tab==="all" && "bg-primary/10"}`}>
                                 <Package className="h-8 w-8 mr-3 text-primary" />
                                 <div>
                                     <p className="text-sm font-medium">{t('apps.totalApps')}</p>
                                     <p className="text-2xl font-bold">{stats.total}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center p-4 bg-yellow-500/10 rounded-lg">
+                            <div onClick={() => setTab("updates")}  className={`flex items-center p-4 border rounded-lg cursor-pointer  ${tab==="updates" && "bg-primary/10"}`}>
                                 <RefreshCw className="h-8 w-8 mr-3 text-yellow-500" />
                                 <div>
                                     <p className="text-sm font-medium">{t('apps.updatable')}</p>
                                     <p className="text-2xl font-bold">{stats.updatable}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center p-4 bg-green-500/10 rounded-lg">
-                                <ShieldCheck className="h-8 w-8 mr-3 text-green-500" />
-                                <div>
-                                    <p className="text-sm font-medium">{t('apps.recentlyUpdated')}</p>
-                                    <p className="text-2xl font-bold">{stats.recentlyUpdated}</p>
                                 </div>
                             </div>
                         </div>
@@ -335,7 +286,7 @@ const Apps = () => {
 
                 <TabsContent value="all">
                     <Card className="shadow-md">
-                        <CardHeader className="bg-gradient-to-r from-slate-500/10 to-slate-700/10">
+                        <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Package className="h-5 w-5 text-slate-600" />
                                 {t('apps.allApps')}
@@ -344,7 +295,36 @@ const Apps = () => {
                                 {t('apps.allInstalledApps')}
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="p-0">
+
+                        <CardContent className="p-3">
+                            {selectedApps.length > 0 && (
+                                <div className="flex justify-between items-center p-4 pt-0">
+                                    <div className="flex items-center gap-2">
+                                        <Check className="h-5 w-5 text-primary" />
+                                        <span className="font-medium">{t('apps.appsSelected', { 'count': selectedApps.length })}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={updateSelected}
+                                            disabled={updatingApps}
+                                        >
+                                            {updatingApps ? (
+                                                <>
+                                                    <Loader className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                                    {t('apps.updating')}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Download className="h-3.5 w-3.5 mr-1" />
+                                                    {t('apps.updateSelected')}
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                             {loading ? (
                                 <div className="flex items-center justify-center h-64">
                                     <Loader className="h-8 w-8 animate-spin text-primary" />
@@ -363,16 +343,44 @@ const Apps = () => {
 
                 <TabsContent value="updates">
                     <Card className="shadow-md">
-                        <CardHeader className="bg-gradient-to-r from-amber-500/10 to-red-500/10">
+                        <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <RefreshCw className="h-5 w-5 text-amber-500" />
+                                <RefreshCw className="h-5 w-5 " />
                                 {t('apps.availableUpdates')}
                             </CardTitle>
                             <CardDescription>
                                 {t('apps.updateableApps')}
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="p-0">
+                        <CardContent className="p-3">
+                            {selectedApps.length > 0 && (
+                                <div className="flex justify-between items-center p-4 pt-0">
+                                    <div className="flex items-center gap-2">
+                                        <Check className="h-5 w-5 text-primary" />
+                                        <span className="font-medium">{t('apps.appsSelected', { 'count': selectedApps.length })}</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            onClick={updateSelected}
+                                            disabled={updatingApps}
+                                        >
+                                            {updatingApps ? (
+                                                <>
+                                                    <Loader className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                                    {t('apps.updating')}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Download className="h-3.5 w-3.5 mr-1" />
+                                                    {t('apps.updateSelected')}
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                             {loading ? (
                                 <div className="flex items-center justify-center h-64">
                                     <Loader className="h-8 w-8 animate-spin text-primary" />
