@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 export const SidebarData = () => {
   const { t } = useTranslation();
   
-  return {
-    nav: [
+    return {
+        nav: [
       {
         title: t('common.home'),
         href: "/",
@@ -20,7 +20,7 @@ export const SidebarData = () => {
         title: t('common.settings'),
         href: "/settings",
         icon: Cog,
-      }
+    }
     ]
   };
 };

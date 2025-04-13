@@ -53,14 +53,52 @@
         "computerSpecs": "Computer Specifications",
         "hardwareDetails": "Hardware Details",
         "systemInfo": "System Information",
-        "display": "Display"
+        "display": "Display",
+        "welcome": "Welcome to WingetUI",
+        "description": "WingetUI is a modern interface for the Winget package manager.",
+        "features": "Features",
+        "featureList": {
+            "manage": "Manage your applications",
+            "update": "Check for updates",
+            "install": "Install new applications"
+        }
     },
     "apps": {
-        "title": "Installed Applications",
+        "title": "My Apps",
+        "tabs": {
+            "all": "All",
+            "updates": "Updates",
+            "install": "Install Apps"
+        },
+        "loading": "Loading apps...",
+        "error": "Error loading apps",
+        "searchPlaceholder": "Search apps...",
+        "noApps": "No apps found",
+        "selectAll": "Select All",
+        "selectApp": "Select App",
+        "updateSelected": "Update Selected",
+        "appName": "App Name",
+        "version": "Version",
+        "newVersion": "New Version",
+        "updatesAvailable": "Updates available",
+        "allAppsUpToDate": "All apps are up-to-date",
+        "installSelected": "Install Selected",
+        "searchApps": "Search Apps",
+        "searching": "Searching...",
+        "noResults": "No results found",
+        "installSuccess": "Selected apps have been installed successfully",
+        "installError": "Error installing apps",
+        "installed": "Installed",
+        "search": "Search",
+        "clearSearch": "Clear",
+        "searchResults": "Search results",
+        "selectToInstall": "Select apps to install",
+        "installing": "Installing...",
+        "tryAnotherSearch": "Try another search term",
+        "searchToInstall": "Search for applications to install",
         "allApps": "All Applications",
         "updates": "Updates",
         "searchApps": "Search applications...",
-        "updateSelected": "Update Selected",
         "updating": "Updating...",
         "appStatistics": "Application Statistics",
         "appStatus": "Your system application status",
@@ -68,9 +106,6 @@
         "updatable": "Updatable",
         "recentlyUpdated": "Recently Updated",
         "loadingApps": "Loading applications...",
-        "appName": "Application Name",
-        "version": "Version",
-        "newVersion": "New Version",
         "noUpdatesFound": "All Applications Up to Date!",
         "noUpdatesDescription": "Congratulations! All applications in your system are up to date. New updates will be shown here when available.",
         "checkAgain": "Check Again",
@@ -92,10 +127,7 @@
         "errorUpdatingApps": "An error occurred while updating the applications.",
         "availableUpdates": "Available Updates",
         "updateableApps": "Applications available for update",
-        "allAppsUpToDate": "All Applications Up to Date!",
-        "noUpdatesAvailable": "Congratulations! All applications in your system are up to date. New updates will be shown here when available.",
         "allInstalledApps": "All applications installed on your system and available in the Winget package manager are listed",
-        "selectApp": "Select application",
         "wingetNotAvailable": "Winget Not Available",
         "wingetMockDataWarning": "The winget command line tool is not available. The data shown is sample data. You can install winget from the Microsoft Store.",
         "errorTitle": "Error Occurred"
@@ -116,14 +148,28 @@
         "notifications": "Notifications",
         "enableNotifications": "Enable notifications",
         "updateNotifications": "Update notifications",
-        "saveSuccess": "Settings saved successfully",
-        "saveError": "Error saving settings",
+        "saveSuccess": "Settings saved!",
+        "saveError": "Failed to save settings!",
         "resetSettings": "Reset Settings",
         "resetConfirm": "Are you sure you want to reset all settings?",
         "about": "About",
         "version": "Version",
         "checkForUpdates": "Check for Updates",
         "license": "License",
-        "credits": "Credits"
+        "credits": "Credits",
+        "languages": {
+            "en": "English",
+            "tr": "Turkish"
+        },
+        "themes": {
+            "light": "Light",
+            "dark": "Dark",
+            "system": "System"
+        }
+    },
+    "sidebar": {
+        "home": "Home",
+        "apps": "Apps",
+        "settings": "Settings"
     }
 }

@@ -1,5 +1,16 @@
 import { exec, spawn } from 'child_process'
 import { platform } from 'os'
+import { promisify } from 'util'
+import path from 'path'
+import { App } from 'electron'
+
+// Uygulama bilgisi tipi tanımı
+interface AppInfo {
+  name: string;
+  id: string;
+  version: string;
+  newVersion?: string;
+}
 
 /**
  * Winget ile ilgili işlemleri yöneten servis
@@ -7,6 +18,11 @@ import { platform } from 'os'
 export class WingetService {
   private isWindows: boolean;
   private wingetAvailable: boolean | null = null;
+  private windowsTerminalAvailable: boolean;
+  private readonly execAsync: Function;
+  updatingApps: Set<string> = new Set();
+  installingApps: Set<string> = new Set();
+  private app: App;
   
   // Örnek uygulama verileri - winget çalışmazsa kullanılacak
   private mockApps = [
@@ -24,8 +40,11 @@ export class WingetService {
     { name: "WhatsApp", version: "2.2320.2", newVersion: "" }
   ];
   
-  constructor() {
+  constructor(app: App) {
     this.isWindows = platform() === 'win32';
+    this.windowsTerminalAvailable = platform() === 'win32';
+    this.execAsync = promisify(exec);
+    this.app = app;
   }
   
   /**
@@ -81,63 +100,17 @@ export class WingetService {
    * Yüklü uygulamaların listesini döndürür
    * @returns Yüklü uygulamaların listesi
    */
-  async getInstalledApps() {
+  async getInstalledApps(): Promise<any> {
     try {
-      // Winget kullanılabilir mi diye kontrol et
-      const isAvailable = await this.checkWingetAvailability();
-      if (!isAvailable) {
-        console.warn('Winget not available, returning mock data');
-        // Mock veri döndür
-        return this.generateMockData();
+      const result = await this.executeCommand('list', ['--source', 'winget']);
+      const apps = this.parseInstalledAppsList(result);
+      return apps;
+    } catch (error: any) {
+      console.error('Winget getInstalledApps error:', error);
+      if (error.message.includes('0x80070002') || error.message.includes('not found')) {
+        throw new Error('Winget bulunamadı. Lütfen winget\'in yüklü olduğundan emin olun');
       }
-      
-      return new Promise((resolve) => {
-        // Komut çalışma timeout'u ekle
-        const timeout = setTimeout(() => {
-          console.error('Winget command timed out');
-          resolve(this.generateMockData());
-        }, 10000);
-        
-        exec('winget list --source winget', (error, stdout, stderr) => {
-          clearTimeout(timeout);
-          
-          if (error) {
-            console.error('Winget Error:', error.message);
-            console.error('Stderr:', stderr);
-            // Hata durumunda mock veri döndür
-            return resolve(this.generateMockData());
-          }
-
-          try {
-            const lines = stdout.split('\n').slice(2);
-            const apps = lines
-              .map(line => line.trim())
-              .filter(line => line.length > 0)
-              .map(line => {
-                const parts = line.split(/\s{2,}/);
-                // Eksik alan kontrolü ekle
-                if (parts.length < 3) {
-                  return null; // Geçersiz satırları filtrele
-                }
-                return {
-                  name: parts[0] || 'Unknown App',
-                  id: parts[1],
-                  version: parts[2] || '',
-                  newVersion: parts[3] || "",
-                };
-              })
-              .filter(app => app !== null); // null değerleri filtrele
-            
-            resolve(apps);
-          } catch (parseError) {
-            console.error('Error parsing winget output:', parseError);
-            resolve(this.generateMockData());
-          }
-        });
-      });
-    } catch (error) {
-      console.error('Unexpected error in getInstalledApps:', error);
-      return this.generateMockData();
+      throw new Error(`Uygulama listesi alınamadı: ${error.message}`);
     }
   }
   
@@ -146,116 +119,305 @@ export class WingetService {
    * @param keyword Aranacak anahtar kelime
    * @returns Bulunan uygulamaların listesi
    */
-  async searchApps(keyword: string) {
+  async searchApps(keyword: string): Promise<any> {
     try {
-      // Winget kullanılabilir mi diye kontrol et
-      const isAvailable = await this.checkWingetAvailability();
-      if (!isAvailable) {
-        console.warn('Winget not available, returning filtered mock data');
-        // Anahtar kelime ile filtrele ve döndür
-        return this.mockApps
-          .filter(app => app.name.toLowerCase().includes(keyword.toLowerCase()))
-          .map(app => ({ ...app, id: app.name.replace(/\s+/g, '.').toLowerCase() }));
+      const result = await this.executeCommand('search', [keyword, '--source', 'winget', '--accept-source-agreements']);
+      const apps = this.parseSearchResults(result);
+      return apps;
+    } catch (error: any) {
+      console.error('Winget searchApps error:', error);
+      if (error.message.includes('0x80070002') || error.message.includes('not found')) {
+        throw new Error('Winget bulunamadı. Lütfen winget\'in yüklü olduğundan emin olun');
       }
-      
-      return new Promise((resolve) => {
-        // Komut çalışma timeout'u ekle
-        const timeout = setTimeout(() => {
-          console.error('Winget search command timed out');
-          // Anahtar kelime ile filtrele ve döndür
-          resolve(this.mockApps
-            .filter(app => app.name.toLowerCase().includes(keyword.toLowerCase()))
-            .map(app => ({ ...app, id: app.name.replace(/\s+/g, '.').toLowerCase() })));
-        }, 10000);
-        
-        exec(`winget search "${keyword}" --source winget`, (error, stdout, stderr) => {
-          clearTimeout(timeout);
-          
-          if (error) {
-            console.error('Winget Search Error:', error.message);
-            console.error('Stderr:', stderr);
-            // Hata durumunda filtrelenmiş mock veri döndür
-            return resolve(this.mockApps
-              .filter(app => app.name.toLowerCase().includes(keyword.toLowerCase()))
-              .map(app => ({ ...app, id: app.name.replace(/\s+/g, '.').toLowerCase() })));
-          }
-
-          try {
-            const lines = stdout.split('\n').slice(2);
-            const apps = lines
-              .map(line => line.trim())
-              .filter(line => line.length > 0)
-              .map(line => {
-                const parts = line.split(/\s{2,}/);
-                if (parts.length < 2) {
-                  return null;
-                }
-                return {
-                  name: parts[0] || 'Unknown App',
-                  id: parts[1] || '',
-                  version: parts[2] || '',
-                };
-              })
-              .filter(app => app !== null);
-            
-            resolve(apps);
-          } catch (parseError) {
-            console.error('Error parsing winget search output:', parseError);
-            resolve(this.mockApps
-              .filter(app => app.name.toLowerCase().includes(keyword.toLowerCase()))
-              .map(app => ({ ...app, id: app.name.replace(/\s+/g, '.').toLowerCase() })));
-          }
-        });
-      });
-    } catch (error) {
-      console.error('Unexpected error in searchApps:', error);
-      return this.mockApps
-        .filter(app => app.name.toLowerCase().includes(keyword.toLowerCase()))
-        .map(app => ({ ...app, id: app.name.replace(/\s+/g, '.').toLowerCase() }));
+      throw new Error(`Uygulama araması yapılamadı: ${error.message}`);
     }
   }
   
   /**
    * Winget ile uygulama güncelleme
+   * @param app Güncellenecek uygulama (AppInfo objesi veya string olarak id)
+   * @returns İşlem sonucu
+   */
+  async updateApp(app: AppInfo | string): Promise<any> {
+    try {
+      if (!this.wingetAvailable) {
+        await this.checkWingetAvailability();
+        if (!this.wingetAvailable) {
+          return { 
+            success: false, 
+            message: 'Winget yüklü değil veya erişilemiyor' 
+          };
+        }
+      }
+
+      // Uygulama ID'sini al
+      const appId = typeof app === 'string' ? app : app.id;
+      
+      if (!appId) {
+        return { 
+          success: false, 
+          message: 'Geçersiz uygulama ID. Güncelleme yapılamadı.' 
+        };
+      }
+
+      console.log(`Updating app with ID: ${appId}`);
+      
+      // Uygulamanın şu anda zaten güncelleniyor olup olmadığını kontrol et
+      if (this.updatingApps.has(appId)) {
+        return { 
+          success: false, 
+          message: 'Bu uygulama zaten güncelleniyor' 
+        };
+      }
+      
+      // Güncelleme işlemini takip et
+      this.updatingApps.add(appId);
+      
+      try {
+        // Uygulamanın var olduğunu kontrol et
+        const installedApps = await this.getInstalledApps();
+        const appExists = Array.isArray(installedApps) && installedApps.some(app => app.id === appId);
+        
+        if (!appExists) {
+          this.updatingApps.delete(appId);
+          return { 
+            success: false, 
+            message: `${appId} uygulaması yüklü değil ve güncellenemez` 
+          };
+        }
+        
+        // Önce güncellenebilir paketi kontrol et
+        const result = await this.executeCommand('upgrade', [appId, '--source', 'winget']);
+        
+        // Başarılı çıktıyı kontrol et
+        if (result.includes('successfully') || result.includes('başarıyla')) {
+          console.log(`Successfully updated app: ${appId}`);
+          this.updatingApps.delete(appId);
+          return { 
+            success: true, 
+            message: `${appId} başarıyla güncellendi` 
+          };
+        } 
+        
+        // Zaten güncel olup olmadığını kontrol et 
+        else if (result.includes('No applicable update found') || 
+                result.includes('güncelleştirme bulunamadı') || 
+                result.includes('is already installed') ||
+                result.includes('zaten yüklü')) {
+          console.log(`App is already up to date: ${appId}`);
+          this.updatingApps.delete(appId);
+          return { 
+            success: true, 
+            message: `${appId} zaten güncel` 
+          };
+        } 
+        
+        // Diğer başarı durumlarını kontrol et
+        else if (!result.includes('failed') && !result.includes('error') && !result.includes('hata')) {
+          console.log(`App updated with custom message: ${appId}`);
+          this.updatingApps.delete(appId);
+          return { 
+            success: true, 
+            message: `${appId} güncellendi: ${result.split('\n')[0]}` 
+          };
+        } 
+        
+        // Erişim reddedildi hatası kontrolü
+        else if (result.includes('Access denied') || result.includes('access is denied') || 
+                result.includes('Erişim reddedildi') || result.includes('yetkisiz')) {
+          console.error(`Access denied error while updating app: ${appId}`, result);
+          this.updatingApps.delete(appId);
+          return { 
+            success: false, 
+            message: `${appId} güncellenemedi: Erişim reddedildi. Yönetici olarak çalıştırmayı deneyin.` 
+          };
+        }
+        
+        // Paket bulunamadı hatası kontrolü
+        else if (result.includes('No package found') || result.includes('bulunamadı') || 
+                result.includes('not found')) {
+          console.error(`Package not found error while updating app: ${appId}`, result);
+          this.updatingApps.delete(appId);
+          return { 
+            success: false, 
+            message: `${appId} paketi kaynakta bulunamadı.` 
+          };
+        }
+        
+        // Hata durumu
+        else {
+          console.error(`Error updating app: ${appId}`, result);
+          this.updatingApps.delete(appId);
+          
+          // Hata çıktısını daha detaylı işleyelim
+          const errorLine = result.split('\n').find(line => 
+            line.includes('failed') || 
+            line.includes('error') || 
+            line.includes('hata') || 
+            line.includes('başarısız')
+          );
+          
+          return { 
+            success: false, 
+            message: `${appId} güncellenemedi: ${errorLine || result.split('\n')[0]}` 
+          };
+        }
+      } catch (error: any) {
+        console.error(`Exception when updating app ${appId}:`, error);
+        this.updatingApps.delete(appId);
+        
+        // Özel hata mesajları için kontrol
+        let errorMessage = error.message || 'Bilinmeyen bir hata oluştu';
+        
+        if (errorMessage.includes('0x80070002') || errorMessage.includes('not found')) {
+          errorMessage = 'Winget bulunamadı. Lütfen winget\'in yüklü olduğundan emin olun';
+        } else if (errorMessage.includes('0x8007139f')) {
+          errorMessage = 'Bu işlem için yönetici izinleri gerekli';
+        } else if (errorMessage.includes('NetworkError') || errorMessage.includes('network')) {
+          errorMessage = 'Ağ hatası: Lütfen internet bağlantınızı kontrol edin';
+        }
+        
+        return { 
+          success: false, 
+          message: `Hata: ${errorMessage}` 
+        };
+      }
+    } catch (error: any) {
+      console.error('updateApp error:', error);
+      return { 
+        success: false, 
+        message: `Hata: ${error.message || 'Bilinmeyen bir hata oluştu'}` 
+      };
+    }
+  }
+
+  /**
+   * Seçili uygulamaları güncelleme
+   * @param apps Güncellenecek uygulama listesi
+   * @returns Güncelleme sonuçları
+   */
+  async update(apps: (AppInfo | string)[]): Promise<any[]> {
+    try {
+      if (!Array.isArray(apps) || apps.length === 0) {
+        return [{
+          id: 'batch',
+          success: false,
+          message: 'Güncellenecek uygulama listesi boş veya geçersiz'
+        }];
+      }
+      
+      const results = [];
+      
+      for (const app of apps) {
+        const result = await this.updateApp(app);
+        const appId = typeof app === 'string' ? app : app.id;
+        results.push({
+          id: appId || 'unknown',
+          ...result
+        });
+      }
+      
+      return results;
+    } catch (error: any) {
+      console.error('Batch update error:', error);
+      return [{
+        id: 'batch',
+        success: false,
+        message: `Toplu güncelleme hatası: ${error.message || 'Bilinmeyen bir hata oluştu'}`
+      }];
+    }
+  }
+
+  /**
+   * Winget ile uygulama yükleme
    * @param appId Uygulamanın ID'si
    * @returns İşlem sonucu
    */
-  async updateApp(appId: string) {
+  async installApp(appId: string): Promise<any> {
     try {
-      // Winget kullanılabilir mi diye kontrol et
-      const isAvailable = await this.checkWingetAvailability();
-      if (!isAvailable) {
-        console.warn('Winget not available, simulating update success');
-        // Başarılı güncelleme simülasyonu
-        return Promise.resolve("Update operation simulated successfully for " + appId);
+      if (!this.wingetAvailable) {
+        throw new Error('Winget yüklü değil.');
+      }
+
+      console.log(`Installing app with ID: ${appId}`);
+      
+      // Uygulamanın şu anda zaten yükleniyor olup olmadığını kontrol et
+      if (this.installingApps.has(appId)) {
+        return { success: false, message: 'Bu uygulama zaten yükleniyor' };
       }
       
-      return new Promise((resolve, reject) => {
-        // Komut çalışma timeout'u ekle
-        const timeout = setTimeout(() => {
-          console.error('Winget update command timed out');
-          resolve("Update operation timed out, but might still be running in background for " + appId);
-        }, 15000);
+      // Yükleme işlemini takip et
+      this.installingApps.add(appId);
+      
+      try {
+        // Uygulamanın zaten yüklü olup olmadığını kontrol et
+        const installedApps = await this.getInstalledApps();
+        const alreadyInstalled = installedApps.some(app => app.id === appId);
         
-        exec(`winget upgrade "${appId}" --source winget`, (error, stdout, stderr) => {
-          clearTimeout(timeout);
-          
-          if (error) {
-            console.error('Winget Update Error:', error.message);
-            console.error('Stderr:', stderr);
-            // Bazı hatalar, örneğin 'uygulama zaten güncel', başarı olarak değerlendirilebilir
-            if (stderr.includes('already installed') || stdout.includes('already installed')) {
-              return resolve("App is already up to date: " + appId);
-            }
-            return reject(new Error(`Error updating app ${appId}: ${stderr || error.message}`));
-          }
-
-          resolve(stdout);
-        });
-      });
-    } catch (error) {
-      console.error('Unexpected error in updateApp:', error);
-      return Promise.reject(error);
+        if (alreadyInstalled) {
+          this.installingApps.delete(appId);
+          return { 
+            success: false, 
+            message: `${appId} uygulaması zaten yüklü` 
+          };
+        }
+        
+        // Yükleme komutunu çalıştır
+        const result = await this.executeCommand('install', [appId, '--source', 'winget', '--accept-source-agreements', '--accept-package-agreements']);
+        
+        // Başarılı çıktıyı kontrol et
+        if (result.includes('successfully') || result.includes('başarıyla')) {
+          console.log(`Successfully installed app: ${appId}`);
+          this.installingApps.delete(appId);
+          return { 
+            success: true, 
+            message: `${appId} başarıyla yüklendi` 
+          };
+        } 
+        
+        // Zaten yüklü olup olmadığını kontrol et 
+        else if (result.includes('is already installed') || result.includes('zaten yüklü')) {
+          console.log(`App is already installed: ${appId}`);
+          this.installingApps.delete(appId);
+          return { 
+            success: true, 
+            message: `${appId} zaten yüklü` 
+          };
+        } 
+        
+        // Diğer başarı durumlarını kontrol et
+        else if (!result.includes('failed') && !result.includes('error')) {
+          console.log(`App installed with custom message: ${appId}`);
+          this.installingApps.delete(appId);
+          return { 
+            success: true, 
+            message: `${appId} yüklendi: ${result.split('\n')[0]}` 
+          };
+        } 
+        
+        // Hata durumu
+        else {
+          console.error(`Error installing app: ${appId}`, result);
+          this.installingApps.delete(appId);
+          return { 
+            success: false, 
+            message: `${appId} yüklenemedi: ${result.split('\n')[0]}` 
+          };
+        }
+      } catch (error: any) {
+        console.error(`Exception when installing app ${appId}:`, error);
+        this.installingApps.delete(appId);
+        return { 
+          success: false, 
+          message: `Hata: ${error.message || 'Bilinmeyen bir hata oluştu'}` 
+        };
+      }
+    } catch (error: any) {
+      console.error('installApp error:', error);
+      return { 
+        success: false, 
+        message: `Hata: ${error.message || 'Bilinmeyen bir hata oluştu'}` 
+      };
     }
   }
   
@@ -274,5 +436,237 @@ export class WingetService {
         // Uygulamanın güncelleme durumunu korumak için burada değişiklik yapmıyoruz
       };
     });
+  }
+
+  private async executeCommand(command: string, args: string[] = []): Promise<string> {
+    try {
+      // Başarısız istekler için 3 kez yeniden deneme
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const result = await new Promise<string>((resolve, reject) => {
+            console.log(`Executing winget command: winget ${command} ${args.join(' ')}`);
+            
+            const childProcess = spawn('winget', [command, ...args], {
+              shell: true
+            });
+
+            let stdout = '';
+            let stderr = '';
+
+            childProcess.stdout.on('data', data => {
+              const chunk = data.toString();
+              stdout += chunk;
+              console.log(`[winget stdout]: ${chunk}`);
+            });
+
+            childProcess.stderr.on('data', data => {
+              const chunk = data.toString();
+              stderr += chunk;
+              console.error(`[winget stderr]: ${chunk}`);
+            });
+
+            childProcess.on('close', code => {
+              console.log(`Winget command exited with code ${code}`);
+              
+              // Standart hata çıktısında daha detaylı hata bilgisi olabilir
+              if (code !== 0) {
+                const errorMessage = stderr || `Winget komutu ${code} kodu ile başarısız oldu`;
+                const errorDetail = {
+                  command: `winget ${command} ${args.join(' ')}`,
+                  exitCode: code,
+                  stdout: stdout,
+                  stderr: stderr
+                };
+                
+                console.error('Winget command failed:', errorDetail);
+                
+                // Bilinen hata mesajlarını daha açık hale getir
+                if (stderr.includes('0x80070002') || stderr.includes('not found')) {
+                  reject(new Error('Winget bulunamadı. Lütfen winget\'in yüklü olduğundan emin olun'));
+                } else if (stderr.includes('0x8007139f')) {
+                  reject(new Error('Bu işlem için yönetici izinleri gerekli olabilir'));
+                } else if (stderr.includes('NetworkError') || stderr.includes('network')) {
+                  reject(new Error('Ağ hatası: Lütfen internet bağlantınızı kontrol edin'));
+                } else if (stderr.includes('Failed to update package')) {
+                  reject(new Error('Paket güncellenirken hata oluştu: Güncelleme engellenmiş veya paket kilitli olabilir'));
+                } else {
+                  reject(new Error(errorMessage));
+                }
+              } else {
+                // Komut başarılı olsa da, çıktı boşsa veya hata içeriyorsa kontrol et
+                if (!stdout.trim()) {
+                  console.warn('Winget command returned empty output');
+                  resolve('Komut başarıyla çalıştı fakat çıktı üretmedi');
+                } else if (stdout.includes('failed') || stdout.includes('error')) {
+                  console.warn('Winget command output contains error indicators:', stdout);
+                  // Başarılı çıkış kodu, ancak çıktı hata içerebilir - bunu kullanıcıya bildir
+                  resolve(stdout);
+                } else {
+                  resolve(stdout);
+                }
+              }
+            });
+
+            childProcess.on('error', err => {
+              console.error('Winget process error:', err);
+              reject(new Error(`Winget komutu çalıştırılamadı: ${err.message}`));
+            });
+            
+            // Zaman aşımı ekle
+            const timeout = setTimeout(() => {
+              childProcess.kill();
+              console.error('Winget command timed out after 30 seconds');
+              reject(new Error('Winget komutu zaman aşımına uğradı. İşlem iptal edildi.'));
+            }, 30000); // 30 saniye zaman aşımı
+            
+            // Çocuk süreç kapandığında zamanlayıcıyı temizle
+            childProcess.on('close', () => clearTimeout(timeout));
+          });
+
+          return result;
+        } catch (error: any) {
+          // Son denemede başarısız olursa, hatayı fırlat
+          if (attempt === 3) {
+            console.error(`Winget command failed after 3 attempts: ${error.message}`);
+            throw error;
+          }
+          
+          // Aksi takdirde 2 saniye bekle ve yeniden dene
+          const delay = attempt * 2000; // Her denemede bekle süresini artır
+          console.log(`Winget komutu başarısız oldu, ${attempt}/3 yeniden deneniyor (${delay}ms sonra)...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+      
+      // Bu noktaya hiç gelinmemeli, ama TypeScript memnun olsun diye
+      throw new Error('Beklenmeyen bir hata oluştu');
+    } catch (error: any) {
+      console.error('Winget executeCommand error:', error);
+      throw error;
+    }
+  }
+
+  private parseInstalledAppsList(result: string): any[] {
+    try {
+      // Çıktının yapısını incele
+      console.log('Parsing winget list output:', result.slice(0, 200) + '...');
+      
+      // Çıktı satırlara bölünür
+      const lines = result.split('\n');
+      
+      // Winget versiyonuna göre başlık satır sayısı değişebilir, bu yüzden veri satırlarını belirle
+      let startIndex = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes('Name') && lines[i].includes('Id') && lines[i].includes('Version')) {
+          startIndex = i + 2; // Başlık ve ayırıcı satırdan sonraki satırdan başla
+          break;
+        }
+      }
+      
+      if (startIndex === 0) {
+        console.warn('Winget output header not found, using default parsing logic');
+        startIndex = 2; // Başlık bulunamadıysa varsayılan olarak 3. satırdan başla
+      }
+      
+      const dataLines = lines.slice(startIndex);
+      
+      const apps = dataLines
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+          try {
+            // Çıktı formatı: Ad  ID  Sürüm  Kullanılabilir [Kaynak]
+            const parts = line.split(/\s{2,}/);
+            
+            // Eksik alan kontrolü ekle
+            if (parts.length < 3) {
+              console.warn('Invalid winget output line format:', line);
+              return null; // Geçersiz satırları filtrele
+            }
+            
+            return {
+              name: parts[0] || 'Unknown App',
+              id: parts[1] || '',
+              version: parts[2] || '',
+              newVersion: parts[3] || "",
+            };
+          } catch (lineError) {
+            console.warn('Error parsing winget output line:', line, lineError);
+            return null;
+          }
+        })
+        .filter(app => app !== null); // null değerleri filtrele
+      
+      console.log(`Successfully parsed ${apps.length} applications`);
+      return apps;
+    } catch (parseError) {
+      console.error('Error parsing winget output:', parseError);
+      console.log('Returning mock data due to parsing error');
+      return this.generateMockData();
+    }
+  }
+
+  private parseSearchResults(result: string): any[] {
+    try {
+      console.log('Parsing winget search output:', result.slice(0, 200) + '...');
+      
+      // Çıktı satırlara bölünür
+      const lines = result.split('\n');
+      
+      // Winget versiyonuna göre başlık satır sayısı değişebilir, bu yüzden veri satırlarını belirle
+      let startIndex = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes('Name') && lines[i].includes('Id') && lines[i].includes('Version')) {
+          startIndex = i + 2; // Başlık ve ayırıcı satırdan sonraki satırdan başla
+          break;
+        }
+      }
+      
+      if (startIndex === 0) {
+        console.warn('Winget search output header not found, using default parsing logic');
+        startIndex = 2; // Başlık bulunamadıysa varsayılan olarak 3. satırdan başla
+      }
+      
+      const dataLines = lines.slice(startIndex);
+      
+      const apps = dataLines
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .map(line => {
+          try {
+            // Çıktı formatı: Ad  ID  Sürüm [Kaynak]
+            const parts = line.split(/\s{2,}/);
+            
+            if (parts.length < 2) {
+              console.warn('Invalid winget search output line format:', line);
+              return null;
+            }
+            
+            return {
+              name: parts[0] || 'Unknown App',
+              id: parts[1] || '',
+              version: parts[2] || '',
+              installed: false // Varsayılan olarak yüklü değil
+            };
+          } catch (lineError) {
+            console.warn('Error parsing winget search output line:', line, lineError);
+            return null;
+          }
+        })
+        .filter(app => app !== null);
+      
+      console.log(`Successfully parsed ${apps.length} search results`);
+      return apps;
+    } catch (parseError) {
+      console.error('Error parsing winget search output:', parseError);
+      console.log('Returning mock data due to parsing error');
+      return this.mockApps
+        .filter(app => app.name.toLowerCase().includes(''))
+        .map(app => ({ 
+          ...app, 
+          id: app.name.replace(/\s+/g, '.').toLowerCase(),
+          installed: false 
+        }));
+    }
   }
 } 

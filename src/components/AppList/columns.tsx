@@ -8,6 +8,7 @@ export type AppInfo = {
     version: string;
     newVersion?: string;
     selected?: boolean;
+    isInstalled?: boolean;
 }
 
 // useTranslation hook'unu kullanmak için bir HOC (Higher Order Component) oluşturuyoruz
@@ -31,15 +32,25 @@ export const createColumns = (): ColumnDef<AppInfo>[] => {
                     />
                 </div>
             ),
-            cell: ({ row }) => (
-                <div className="w-[30px] flex justify-center">
-                    <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value: boolean | "indeterminate") => row.toggleSelected(!!value)}
-                        aria-label={t('apps.selectApp')}
-                    />
-                </div>
-            ),
+            cell: ({ row }) => {
+                const isInstalled = row.original.isInstalled;
+
+                return (
+                    <div className="w-[30px] flex justify-center">
+                        {isInstalled ? (
+                            <span className="text-xs text-primary font-medium">
+                                {t('apps.installed')}
+                            </span>
+                        ) : (
+                            <Checkbox
+                                checked={row.getIsSelected()}
+                                onCheckedChange={(value: boolean | "indeterminate") => row.toggleSelected(!!value)}
+                                aria-label={t('apps.selectApp')}
+                            />
+                        )}
+                    </div>
+                );
+            },
             enableSorting: false,
             enableHiding: false,
             size: 30,
