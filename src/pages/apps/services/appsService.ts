@@ -109,7 +109,7 @@ export async function installSelectedApps(selectedApps: AppInfo[]): Promise<void
     try {
         // Her bir seçili uygulama için install çağrısı yapabiliriz
         for (const app of selectedApps) {
-            await window.ipcRenderer.invoke('installApp', app.id || app.name);
+            await window.ipcRenderer.invoke('install-app', app.id || app.name);
         }
 
         return Promise.resolve();
