@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -39,12 +39,15 @@ function createWindow() {
     },
   })
 
+  win.setMenu(null);
+
   // IPC mesaj işleyicilerini kaydet
   const ipcHandlerService = new IpcHandlerService();
   ipcHandlerService.registerHandlers();
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
+    console.log('Page Loaded');
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
   })
 

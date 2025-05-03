@@ -1,4 +1,3 @@
-import React from 'react';
 import { Check, Loader, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";

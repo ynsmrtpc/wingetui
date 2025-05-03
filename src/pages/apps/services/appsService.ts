@@ -93,9 +93,9 @@ export function markInstalledApps(searchResults: AppInfo[], installedApps: AppIn
     
     // Arama sonuçlarını kontrol et
     return searchResults.map(app => {
-        const isInstalled = 
-            (app.id && installedIds.has(app.id.toLowerCase())) || 
-            (app.name && installedNames.has(app.name.toLowerCase()));
+        const isInstalled =
+            Boolean(app.id && installedIds.has(app.id.toLowerCase())) ||
+            Boolean(app.name && installedNames.has(app.name.toLowerCase()));
         
         return {
             ...app,

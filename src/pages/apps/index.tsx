@@ -1,4 +1,3 @@
-import React from "react";
 import { Package, RefreshCw, Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";

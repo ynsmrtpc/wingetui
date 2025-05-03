@@ -1,7 +1,5 @@
-import { exec, spawn } from 'child_process'
+import {  spawn } from 'child_process'
 import { platform } from 'os'
-import { promisify } from 'util'
-import path from 'path'
 import { App } from 'electron'
 
 // Uygulama bilgisi tipi tanımı
@@ -18,11 +16,11 @@ interface AppInfo {
 export class WingetService {
   private isWindows: boolean;
   private wingetAvailable: boolean | null = null;
-  private windowsTerminalAvailable: boolean;
-  private readonly execAsync: Function;
+  // private windowsTerminalAvailable: boolean;
+  // private readonly execAsync: Function;
   updatingApps: Set<string> = new Set();
   installingApps: Set<string> = new Set();
-  private app: App;
+  private readonly app: App;
   
   // Örnek uygulama verileri - winget çalışmazsa kullanılacak
   private mockApps = [
@@ -39,11 +37,11 @@ export class WingetService {
     { name: "Discord", version: "1.0.9012", newVersion: "1.0.9016" },
     { name: "WhatsApp", version: "2.2320.2", newVersion: "" }
   ];
-  
+
   constructor(app: App) {
     this.isWindows = platform() === 'win32';
-    this.windowsTerminalAvailable = platform() === 'win32';
-    this.execAsync = promisify(exec);
+    // this.windowsTerminalAvailable = platform() === 'win32';
+    // this.execAsync = promisify(exec);
     this.app = app;
   }
   
@@ -56,7 +54,7 @@ export class WingetService {
     if (this.wingetAvailable !== null) {
       return this.wingetAvailable;
     }
-    
+    console.log(this.app);
     // Windows dışı işletim sistemlerinde winget çalışmaz
     if (!this.isWindows) {
       console.warn('Winget only works on Windows OS');
@@ -352,8 +350,8 @@ export class WingetService {
       try {
         // Uygulamanın zaten yüklü olup olmadığını kontrol et
         const installedApps = await this.getInstalledApps();
-        const alreadyInstalled = installedApps.some(app => app.id === appId);
-        
+        const alreadyInstalled = installedApps.some((app: AppInfo) => app.id === appId);
+
         if (alreadyInstalled) {
           this.installingApps.delete(appId);
           return { 

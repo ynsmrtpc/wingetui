@@ -1,4 +1,3 @@
-import React from 'react';
 import { RefreshCw, Loader, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";

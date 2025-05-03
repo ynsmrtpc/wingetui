@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import { SystemInfoService } from './system-info'
 import { WingetService } from './winget'
+import { app } from 'electron';
 
 /**
  * IPC mesaj işleyicilerini kaydeden servis
@@ -11,7 +12,7 @@ export class IpcHandlerService {
   
   constructor() {
     this.systemInfoService = new SystemInfoService()
-    this.wingetService = new WingetService()
+    this.wingetService = new WingetService(app);
   }
   
   /**
