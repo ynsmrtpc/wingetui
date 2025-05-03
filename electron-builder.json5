@@ -4,6 +4,7 @@
   "appId": "com.wingetui.app",
   "asar": true,
   "productName": "WingetUI",
+  "icon": "public/icon.svg",
   "directories": {
     "output": "release"
   },
@@ -11,7 +12,8 @@
     "dist/**",
     "dist-electron/**",
     "node_modules/**",
-    "package.json"
+    "package.json",
+    "public/**"
   ],
   "mac": {
     "target": [

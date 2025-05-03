@@ -60,7 +60,14 @@
             "manage": "Uygulamalarınızı yönetin",
             "update": "Güncellemeleri kontrol edin",
             "install": "Yeni uygulamalar yükleyin"
-        }
+        },
+        "performanceScore": "Performans Puanı",
+        "totalApps": "Toplam Uygulama",
+        "systemUsage": "Sistem Kullanımı",
+        "cpuUsage": "İşlemci Kullanımı",
+        "memoryUsage": "Bellek Kullanımı",
+        "gpuUsage": "Ekran Kartı Kullanımı",
+        "networkUsage": "Ağ Kullanımı"
     },
     "apps": {
         "title": "Uygulamalarım",
@@ -76,8 +83,10 @@
         "selectAll": "Tümünü Seç",
         "selectApp": "Uygulama Seç",
         "updateSelected": "Seçilenleri Güncelle",
+        "actions": "Kaldır",
         "appName": "Uygulama Adı",
         "version": "Sürüm",
+        "uninstallError": "Uygulama Kaldırma Hatası",
         "newVersion": "Yeni Sürüm",
         "updatesAvailable": "Güncellemeler mevcut",
         "allAppsUpToDate": "Tüm uygulamalar güncel",
@@ -130,7 +139,13 @@
         "allInstalledApps": "Sisteminizde yüklü ve Winget paket yöneticisinde bulunan tüm uygulamalar listelenir",
         "wingetNotAvailable": "Winget bulunamadı",
         "wingetMockDataWarning": "Winget komut satırı aracı kullanılamıyor. Şu anda gösterilen veriler örnek verilerdir. Winget'i yüklemek için Microsoft Store'u kullanabilirsiniz.",
-        "errorTitle": "Hata oluştu"
+        "errorTitle": "Hata oluştu",
+        "wingetNotInstalled": "Sisteminizde winget yüklü değil",
+        "clickToInstallWinget": "Yüklemek için tıklayınız",
+        "installWinget": "Winget'i Yükle",
+        "installingWinget": "Winget Yükleniyor...",
+        "wingetInstallStarted": "Winget Yükleme Başlatıldı",
+        "wingetInstallError": "Winget Yükleme Hatası"
     },
     "settings": {
         "title": "Ayarlar",

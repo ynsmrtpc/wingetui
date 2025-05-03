@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { RowSelectionState } from "@tanstack/react-table";
 import { createColumns, AppInfo } from "@/components/AppList/columns";
 import { useTranslation } from "react-i18next";
+import AppTabSkeletonLoader from "@/components/skeletons/AppTabSkeletonLoader";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
     getData,
     updateSelectedApps,
@@ -10,7 +12,9 @@ import {
     filterForUpdates,
     searchApps,
     markInstalledApps,
-    installSelectedApps
+    installSelectedApps,
+    uninstallApp,
+    installWinget
 } from '../services/appsService';
 
 interface AppContextType {
@@ -45,6 +49,13 @@ interface AppContextType {
     clearSearch: () => void;
     installSelected: () => Promise<void>;
     installingApps: boolean;
+
+    // Uygulama kaldırma fonksiyonu
+    uninstallApp: (app: AppInfo) => Promise<void>;
+
+    // Winget yükleme fonksiyonu
+    installWinget: () => Promise<void>;
+    installingWinget: boolean;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -65,6 +76,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     const { t } = useTranslation();
     const [data, setData] = useState<AppInfo[] | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [initialLoad, setInitialLoad] = useState<boolean>(true);
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [updatingApps, setUpdatingApps] = useState<boolean>(false);
@@ -78,18 +90,21 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     const [searchLoading, setSearchLoading] = useState<boolean>(false);
     const [searching, setSearching] = useState<boolean>(false);
     const [installingApps, setInstallingApps] = useState<boolean>(false);
+    const [installingWinget, setInstallingWinget] = useState<boolean>(false);
 
     const [stats, setStats] = useState({
         total: 0,
         updatable: 0,
     });
 
-    // Tabloyu oluştur (çeviri desteğiyle)
-    const columns = createColumns();
-
     // Verileri yükleyen fonksiyon
     const getDataFromData = async () => {
         try {
+            // Only set loading to true if it's the initial load
+            if (initialLoad) {
+                setLoading(true);
+            }
+
             setError(null);
             const result = await getData();
 
@@ -103,7 +118,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                 }
             }
 
-            setLoading(false);
             setData(result.data);
 
             // İstatistikleri güncelle
@@ -115,9 +129,72 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         } catch (error) {
             console.error('Uygulama listesi yüklenirken hata:', error);
             setError(error instanceof Error ? error.message : 'Unknown error');
+        } finally {
             setLoading(false);
+            if (initialLoad) {
+                setInitialLoad(false);
+            }
         }
     };
+
+    // Uygulama kaldırma fonksiyonu
+    const handleUninstallApp = async (app: AppInfo) => {
+        if (!app || !app.id) {
+            toast.error(t('apps.invalidApp'), {
+                description: t('apps.uninstallFailed')
+            });
+            return;
+        }
+
+        try {
+            const result = await uninstallApp(app);
+
+            if (result && result.success) {
+                toast.success(t('apps.uninstallSuccess'), {
+                    description: result.message
+                });
+                // Kaldırma sonrası uygulamaları yenile
+                await getDataFromData();
+            } else {
+                toast.error(t('apps.uninstallError'), {
+                    description: result?.message || t('apps.unknownError')
+                });
+            }
+        } catch (error) {
+            toast.error(t('apps.uninstallError'), {
+                description: error instanceof Error ? error.message : String(error)
+            });
+        }
+    };
+
+    // Winget yükleme fonksiyonu
+    const handleInstallWinget = async () => {
+        setInstallingWinget(true);
+        try {
+            const result = await installWinget();
+
+            if (result && result.success) {
+                toast.success(t('apps.wingetInstallStarted'), {
+                    description: result.message
+                });
+                // Winget yüklendikten sonra uygulamaları yeniden yükle
+                await getDataFromData();
+            } else {
+                toast.error(t('apps.wingetInstallError'), {
+                    description: result?.message || t('apps.unknownError')
+                });
+            }
+        } catch (error) {
+            toast.error(t('apps.wingetInstallError'), {
+                description: error instanceof Error ? error.message : String(error)
+            });
+        } finally {
+            setInstallingWinget(false);
+        }
+    };
+
+    // Tabloyu oluştur (çeviri desteğiyle ve mevcut sekme bilgisiyle)
+    const columns = createColumns(currentTab, handleUninstallApp);
 
     // Güncellemeleri denetleme fonksiyonu
     const checkForUpdates = async () => {
@@ -126,7 +203,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         // Mevcut veriyi temizle ve yeni veriyi al
         setData(null);
-        setLoading(true);
+
+        // Don't set loading to true for refreshes, only for initial load
+        // This is handled in getDataFromData now
 
         try {
             await getDataFromData();
@@ -149,18 +228,68 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         setUpdatingApps(true);
         try {
-            await updateSelectedApps(selectedApps);
-            toast.success(t('apps.updateStarted'), {
-                description: t('apps.appsStartedUpdating', { count: selectedApps.length })
-            });
+            const { success, results } = await updateSelectedApps(selectedApps);
+
+            // Başarılı güncelleme sayısını hesapla
+            const successCount = results.filter(r => r.success).length;
+
+            // Başarısız güncellemeleri filtrele
+            const failedUpdates = results.filter(r => !r.success);
+
+            // Genel başarı durumuna göre bildirim göster
+            if (success) {
+                if (failedUpdates.length > 0) {
+                    // Bazı güncellemeler başarılı, bazıları başarısız
+                    toast.success(t('apps.someUpdatesSucceeded'), {
+                        description: t('apps.someAppsUpdated', { 
+                            success: successCount, 
+                            total: selectedApps.length 
+                        })
+                    });
+
+                    // Her başarısız güncelleme için ayrı hata bildirimi göster
+                    failedUpdates.forEach(result => {
+                        const appName = selectedApps.find(app => app.id === result.id)?.name || result.id;
+                        toast.error(t('apps.updateFailed'), {
+                            description: `${appName}: ${result.message || t('apps.unknownError')}`
+                        });
+                    });
+                } else {
+                    // Tüm güncellemeler başarılı
+                    toast.success(t('apps.updateSuccess'), {
+                        description: t('apps.allAppsUpdated', { count: selectedApps.length })
+                    });
+                }
+            } else {
+                // Hiçbir güncelleme başarılı değil
+                toast.error(t('apps.updateFailed'), {
+                    description: t('apps.noAppsUpdated')
+                });
+
+                // Her başarısız güncelleme için ayrı hata bildirimi göster
+                failedUpdates.forEach(result => {
+                    if (result.id === 'batch') {
+                        // Genel hata
+                        toast.error(t('apps.updateFailed'), {
+                            description: result.message || t('apps.unknownError')
+                        });
+                    } else {
+                        const appName = selectedApps.find(app => app.id === result.id)?.name || result.id;
+                        toast.error(t('apps.updateFailed'), {
+                            description: `${appName}: ${result.message || t('apps.unknownError')}`
+                        });
+                    }
+                });
+            }
+
             // verileri yeniden yükleyebiliriz
             await getDataFromData();
-            setUpdatingApps(false);
             setSelectedApps([]);
         } catch (error) {
             toast.error(t('apps.updateFailed'), {
-                description: t('apps.errorUpdatingApps')
+                description: error instanceof Error ? error.message : t('apps.errorUpdatingApps')
             });
+        } finally {
             setUpdatingApps(false);
         }
     };
@@ -217,8 +346,60 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
         setInstallingApps(true);
         try {
-            await installSelectedApps(selectedApps);
-            toast.success(t('apps.installSuccess'));
+            const { success, results } = await installSelectedApps(selectedApps);
+
+            // Başarılı yükleme sayısını hesapla
+            const successCount = results.filter(r => r.success).length;
+
+            // Başarısız yüklemeleri filtrele
+            const failedInstalls = results.filter(r => !r.success);
+
+            // Genel başarı durumuna göre bildirim göster
+            if (success) {
+                if (failedInstalls.length > 0) {
+                    // Bazı yüklemeler başarılı, bazıları başarısız
+                    toast.success(t('apps.someInstallsSucceeded'), {
+                        description: t('apps.someAppsInstalled', { 
+                            success: successCount, 
+                            total: selectedApps.length 
+                        })
+                    });
+
+                    // Her başarısız yükleme için ayrı hata bildirimi göster
+                    failedInstalls.forEach(result => {
+                        const appName = selectedApps.find(app => app.id === result.id)?.name || result.id;
+                        toast.error(t('apps.installError'), {
+                            description: `${appName}: ${result.message || t('apps.unknownError')}`
+                        });
+                    });
+                } else {
+                    // Tüm yüklemeler başarılı
+                    toast.success(t('apps.installSuccess'), {
+                        description: t('apps.allAppsInstalled', { count: selectedApps.length })
+                    });
+                }
+            } else {
+                // Hiçbir yükleme başarılı değil
+                toast.error(t('apps.installError'), {
+                    description: t('apps.noAppsInstalled')
+                });
+
+                // Her başarısız yükleme için ayrı hata bildirimi göster
+                failedInstalls.forEach(result => {
+                    if (result.id === 'batch') {
+                        // Genel hata
+                        toast.error(t('apps.installError'), {
+                            description: result.message || t('apps.unknownError')
+                        });
+                    } else {
+                        const appName = selectedApps.find(app => app.id === result.id)?.name || result.id;
+                        toast.error(t('apps.installError'), {
+                            description: `${appName}: ${result.message || t('apps.unknownError')}`
+                        });
+                    }
+                });
+            }
+
             // Yükleme sonrası aramayı temizle ve uygulamaları yenile
             clearSearch();
             await getDataFromData();
@@ -262,6 +443,23 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         setSelectedApps(selectedRows);
     };
 
+    // Show skeleton loader only during initial load
+    if (loading && initialLoad) {
+        return (
+            <div className="space-y-6 px-1">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+                    <Skeleton className="h-10 w-64" />
+                    <Skeleton className="h-10 w-48" />
+                </div>
+                <AppTabSkeletonLoader 
+                    showTable={true} 
+                    showActions={false} 
+                    showSearch={false} 
+                />
+            </div>
+        );
+    }
+
     return (
         <AppContext.Provider
             value={{
@@ -292,7 +490,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                 performSearch,
                 clearSearch,
                 installSelected,
-                installingApps
+                installingApps,
+                uninstallApp: handleUninstallApp,
+                installWinget: handleInstallWinget,
+                installingWinget
             }}
         >
             {children}

@@ -26,6 +26,9 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
+// Always use the icon from the public folder
+const iconPath = path.join(process.env.APP_ROOT, 'public', 'icon.svg')
+
 let win: BrowserWindow | null
 
 function createWindow() {
@@ -33,13 +36,13 @@ function createWindow() {
     width: 1200,
     height: 830,
     resizable: true,
-    icon: path.join(process.env.VITE_PUBLIC, 'icon.svg'),
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
   })
 
-  win.setMenu(null);
+  // win.setMenu(null);
 
   // IPC mesaj işleyicilerini kaydet
   const ipcHandlerService = new IpcHandlerService();

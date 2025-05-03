@@ -1,21 +1,19 @@
 import { useEffect, useState } from "react"
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-    CogIcon,
-    Laptop,
     MemoryStick,
     Microchip,
-    Clock,
     HardDrive,
     Cpu,
     Network,
-    Battery,
-    Monitor,
-    Activity
+    LayoutGrid,
+    GaugeCircle,
+    BarChart3,
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SystemInfoTypes } from "@/global"
 import { useTranslation } from "react-i18next";
+import { Progress } from "@/components/ui/progress";
+import HomeSkeletonLoader from "@/components/skeletons/HomeSkeletonLoader";
 
 // Data çekmek için fonksiyon
 async function getData(): Promise<SystemInfoTypes> {
@@ -24,6 +22,8 @@ async function getData(): Promise<SystemInfoTypes> {
 
 const Home = () => {
     const { t } = useTranslation();
+    const [loading, setLoading] = useState<boolean>(true);
+    const [initialLoad, setInitialLoad] = useState<boolean>(true);
     const [systemInfo, setSystemInfo] = useState<SystemInfoTypes>({
         cpu: "",
         ram: "",
@@ -32,186 +32,233 @@ const Home = () => {
         cpuSpeed: "3.2 GHz",
         cpuCores: 8,
         cpuThreads: 16,
+        cpuUsage: 0,
+        memoryUsage: 0,
+        gpu: "Unknown GPU",
+        gpuUsage: 0,
+        networkUsage: 0,
         diskSpace: "512 GB",
         diskFree: "320 GB",
         networkName: "Wi-Fi",
         batteryLevel: 0,
         screenResolution: "1920x1080",
-        uptime: "5 saat 32 dakika"
+        uptime: "5 saat 32 dakika",
+        performanceScore: 0,
+        totalApps: 0
     })
 
     const getDataFromData = async () => {
-        const result = await getData();
-        setSystemInfo({ ...systemInfo, ...result });
+        // Only set loading to true if it's the initial load
+        if (initialLoad) {
+            setLoading(true);
+        }
+        try {
+            const result = await getData();
+            setSystemInfo({ ...systemInfo, ...result });
+        } finally {
+            setLoading(false);
+            if (initialLoad) {
+                setInitialLoad(false);
+            }
+        }
     }
 
     useEffect(() => {
         getDataFromData();
+
+        // Refresh data every 5 seconds for real-time metrics
+        const interval = setInterval(() => {
+            getDataFromData();
+        }, 5000);
+
+        return () => clearInterval(interval);
     }, []);
+
+    // Helper function to determine color based on usage percentage
+    const getUsageColor = (usage: number) => {
+        if (usage < 30) return "text-green-500";
+        if (usage < 70) return "text-amber-500";
+        return "text-red-500";
+    };
+
+    // Helper function to determine progress color based on usage percentage
+    const getProgressColor = (usage: number) => {
+        if (usage < 30) return "bg-green-500";
+        if (usage < 70) return "bg-amber-500";
+        return "bg-red-500";
+    };
+
+    // Helper function to determine performance score color
+    const getScoreColor = (score: number) => {
+        if (score >= 7) return "text-green-500";
+        if (score >= 4) return "text-amber-500";
+        return "text-red-500";
+    };
+
+    if (loading && initialLoad) {
+        return <HomeSkeletonLoader />;
+    }
 
     return (
         <div className="space-y-6">
-            <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid grid-cols-3 mb-4">
-                    <TabsTrigger value="overview">{t('home.overview')}</TabsTrigger>
-                    <TabsTrigger value="hardware">{t('home.hardware')}</TabsTrigger>
-                    <TabsTrigger value="system">{t('home.system')}</TabsTrigger>
-                </TabsList>
 
-                <TabsContent value="overview">
-                    <CardHeader className="bg-gradient-to-r from-blue-500/10 to-purple-500/10">
-                        <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                            <Laptop className="h-6 w-6 text-blue-500" />
-                            {t('home.computerSpecs')}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="flex items-start space-x-4 bg-slate-50 dark:bg-slate-900 p-4 rounded-lg shadow-sm">
-                            <Microchip className="h-8 w-8 text-blue-500 mt-1" />
-                            <div>
-                                <h3 className="font-semibold text-lg">{t('home.processor')}</h3>
-                                <p className="text-slate-600 dark:text-slate-400">{systemInfo.cpu}</p>
-                                <p className="text-sm text-slate-500">{systemInfo.cpuCores} {t('home.cores')} / {systemInfo.cpuThreads} {t('home.threads')}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start space-x-4 bg-slate-50 dark:bg-slate-900 p-4 rounded-lg shadow-sm">
-                            <MemoryStick className="h-8 w-8 text-green-500 mt-1" />
-                            <div>
-                                <h3 className="font-semibold text-lg">{t('home.memory')}</h3>
-                                <p className="text-slate-600 dark:text-slate-400">{systemInfo.ram}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start space-x-4 bg-slate-50 dark:bg-slate-900 p-4 rounded-lg shadow-sm">
-                            <HardDrive className="h-8 w-8 text-amber-500 mt-1" />
-                            <div>
-                                <h3 className="font-semibold text-lg">{t('home.storage')}</h3>
-                                <p className="text-slate-600 dark:text-slate-400">{t('home.total')}: {systemInfo.diskSpace}</p>
-                                <p className="text-sm text-slate-500">{t('home.freeSpace')}: {systemInfo.diskFree}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start space-x-4 bg-slate-50 dark:bg-slate-900 p-4 rounded-lg shadow-sm">
-                            <Activity className="h-8 w-8 text-red-500 mt-1" />
-                            <div>
-                                <h3 className="font-semibold text-lg">{t('home.systemStatus')}</h3>
-                                <p className="text-slate-600 dark:text-slate-400">{t('home.uptime')}: {systemInfo.uptime}</p>
-                                <p className="text-sm text-slate-500">{t('home.battery')}: {systemInfo.batteryLevel}%</p>
-                            </div>
-                        </div>
+            {/* Performance Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="shadow-sm">
+                    <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                        <GaugeCircle className="h-10 w-10 mb-2 text-blue-500" />
+                        <h3 className="text-lg font-semibold text-center">{t('home.performanceScore')}</h3>
+                        <p className={`text-3xl font-bold ${getScoreColor(systemInfo.performanceScore || 0)}`}>
+                            {systemInfo.performanceScore || 0}/10
+                        </p>
                     </CardContent>
-                </TabsContent>
+                </Card>
 
-                <TabsContent value="hardware">
-                    <CardHeader className="bg-gradient-to-r from-amber-500/10 to-red-500/10">
-                        <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                            <Cpu className="h-6 w-6 text-amber-500" />
-                            {t('home.hardwareDetails')}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="border rounded-lg p-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <Microchip className="h-5 w-5 text-blue-500" />
-                                    {t('home.processor')}
-                                </h3>
-                                <div className="mt-2 pl-7 space-y-1">
-                                    <p><span className="font-medium">{t('home.model')}:</span> {systemInfo.cpu}</p>
-                                    <p><span className="font-medium">{t('home.speed')}:</span> {systemInfo.cpuSpeed}</p>
-                                    <p><span className="font-medium">{t('home.cores')}:</span> {systemInfo.cpuCores}</p>
-                                    <p><span className="font-medium">{t('home.threads')}:</span> {systemInfo.cpuThreads}</p>
-                                </div>
-                            </div>
-
-                            <div className="border rounded-lg p-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <MemoryStick className="h-5 w-5 text-green-500" />
-                                    {t('home.memory')}
-                                </h3>
-                                <div className="mt-2 pl-7 space-y-1">
-                                    <p><span className="font-medium">{t('home.totalRAM')}:</span> {systemInfo.ram}</p>
-                                </div>
-                            </div>
-
-                            <div className="border rounded-lg p-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <HardDrive className="h-5 w-5 text-amber-500" />
-                                    {t('home.storage')}
-                                </h3>
-                                <div className="mt-2 pl-7 space-y-1">
-                                    <p><span className="font-medium">{t('home.totalSpace')}:</span> {systemInfo.diskSpace}</p>
-                                    <p><span className="font-medium">{t('home.freeSpace')}:</span> {systemInfo.diskFree}</p>
-                                </div>
-                            </div>
-
-                            <div className="border rounded-lg p-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <Monitor className="h-5 w-5 text-purple-500" />
-                                    {t('home.display')}
-                                </h3>
-                                <div className="mt-2 pl-7 space-y-1">
-                                    <p><span className="font-medium">{t('home.resolution')}:</span> {systemInfo.screenResolution}</p>
-                                </div>
-                            </div>
-                        </div>
+                <Card className="shadow-sm">
+                    <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                        <LayoutGrid className="h-10 w-10 mb-2 text-purple-500" />
+                        <h3 className="text-lg font-semibold text-center">{t('home.totalApps')}</h3>
+                        <p className="text-3xl font-bold text-purple-500">
+                            {systemInfo.totalApps || 0}
+                        </p>
                     </CardContent>
-                </TabsContent>
+                </Card>
 
-                <TabsContent value="system">
-                    <CardHeader className="bg-gradient-to-r from-green-500/10 to-blue-500/10">
-                        <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                            <CogIcon className="h-6 w-6 text-green-500" />
-                            {t('home.systemInfo')}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="border rounded-lg p-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <Laptop className="h-5 w-5 text-blue-500" />
-                                    {t('home.operatingSystem')}
-                                </h3>
-                                <div className="mt-2 pl-7 space-y-1">
-                                    <p><span className="font-medium">OS:</span> {systemInfo.os}</p>
-                                    <p><span className="font-medium">{t('home.version')}:</span> {systemInfo.version}</p>
-                                </div>
-                            </div>
-
-                            <div className="border rounded-lg p-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <Network className="h-5 w-5 text-indigo-500" />
-                                    {t('home.network')}
-                                </h3>
-                                <div className="mt-2 pl-7 space-y-1">
-                                    <p><span className="font-medium">{t('home.connection')}:</span> {systemInfo.networkName}</p>
-                                </div>
-                            </div>
-
-                            <div className="border rounded-lg p-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <Battery className="h-5 w-5 text-green-500" />
-                                    {t('home.power')}
-                                </h3>
-                                <div className="mt-2 pl-7 space-y-1">
-                                    <p><span className="font-medium">{t('home.battery')}:</span> {systemInfo.batteryLevel}%</p>
-                                </div>
-                            </div>
-
-                            <div className="border rounded-lg p-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <Clock className="h-5 w-5 text-red-500" />
-                                    {t('home.uptime')}
-                                </h3>
-                                <div className="mt-2 pl-7 space-y-1">
-                                    <p><span className="font-medium">Uptime:</span> {systemInfo.uptime}</p>
-                                </div>
-                            </div>
-                        </div>
+                <Card className="shadow-sm">
+                    <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                        <Microchip className="h-10 w-10 mb-2 text-green-500" />
+                        <h3 className="text-lg font-semibold text-center">{t('home.processor')}</h3>
+                        <p className="text-sm text-center text-muted-foreground mb-1">{systemInfo.cpu}</p>
+                        <p className="text-xs text-center text-muted-foreground">{systemInfo.cpuCores} {t('home.cores')} / {systemInfo.cpuThreads} {t('home.threads')}</p>
                     </CardContent>
-                </TabsContent>
-            </Tabs>
+                </Card>
+
+                <Card className="shadow-sm">
+                    <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                        <MemoryStick className="h-10 w-10 mb-2 text-amber-500" />
+                        <h3 className="text-lg font-semibold text-center">{t('home.memory')}</h3>
+                        <p className="text-sm text-center text-muted-foreground mb-1">{systemInfo.ram}</p>
+                        <p className="text-xs text-center text-muted-foreground">{t('home.freeSpace')}: {systemInfo.freeRam}</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Real-time Usage Metrics */}
+            <Card className="shadow-md">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5 text-blue-500" />
+                        {t('home.systemUsage')}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* CPU Usage */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <Cpu className="h-5 w-5 text-blue-500" />
+                                <h3 className="font-medium">{t('home.cpuUsage')}</h3>
+                            </div>
+                            <span className={`font-semibold ${getUsageColor(systemInfo.cpuUsage || 0)}`}>
+                                {systemInfo.cpuUsage || 0}%
+                            </span>
+                        </div>
+                        <Progress 
+                            value={systemInfo.cpuUsage || 0} 
+                            max={100} 
+                            className="h-2 w-full bg-slate-200"
+                            indicatorClassName={getProgressColor(systemInfo.cpuUsage || 0)}
+                        />
+                    </div>
+
+                    {/* Memory Usage */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <MemoryStick className="h-5 w-5 text-green-500" />
+                                <h3 className="font-medium">{t('home.memoryUsage')}</h3>
+                            </div>
+                            <span className={`font-semibold ${getUsageColor(systemInfo.memoryUsage || 0)}`}>
+                                {systemInfo.memoryUsage || 0}%
+                            </span>
+                        </div>
+                        <Progress 
+                            value={systemInfo.memoryUsage || 0} 
+                            max={100} 
+                            className="h-2 w-full bg-slate-200"
+                            indicatorClassName={getProgressColor(systemInfo.memoryUsage || 0)}
+                        />
+                    </div>
+
+                    {/* GPU Usage */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <Microchip className="h-5 w-5 text-amber-500" />
+                                <h3 className="font-medium">{t('home.gpuUsage')}</h3>
+                            </div>
+                            <span className={`font-semibold ${getUsageColor(systemInfo.gpuUsage || 0)}`}>
+                                {systemInfo.gpuUsage || 0}%
+                            </span>
+                        </div>
+                        <Progress 
+                            value={systemInfo.gpuUsage || 0} 
+                            max={100} 
+                            className="h-2 w-full bg-slate-200"
+                            indicatorClassName={getProgressColor(systemInfo.gpuUsage || 0)}
+                        />
+                        <p className="text-xs text-muted-foreground">{systemInfo.gpu}</p>
+                    </div>
+
+                    {/* Network Usage */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <Network className="h-5 w-5 text-indigo-500" />
+                                <h3 className="font-medium">{t('home.networkUsage')}</h3>
+                            </div>
+                            <span className={`font-semibold ${getUsageColor(systemInfo.networkUsage || 0)}`}>
+                                {systemInfo.networkUsage || 0}%
+                            </span>
+                        </div>
+                        <Progress 
+                            value={systemInfo.networkUsage || 0} 
+                            max={100} 
+                            className="h-2 w-full bg-slate-200"
+                            indicatorClassName={getProgressColor(systemInfo.networkUsage || 0)}
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>↓ {systemInfo.networkDownload || 0} KB/s</span>
+                            <span>↑ {systemInfo.networkUpload || 0} KB/s</span>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Storage Information */}
+            <Card className="shadow-md">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                        <HardDrive className="h-5 w-5 text-purple-500" />
+                        {t('home.storage')}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-muted-foreground">{t('home.totalSpace')}: {systemInfo.diskSpace}</span>
+                        <span className="text-muted-foreground">{t('home.freeSpace')}: {systemInfo.diskFree}</span>
+                    </div>
+                    <Progress 
+                        value={systemInfo.diskSpace ? 
+                            parseInt(systemInfo.diskSpace.replace(/\D/g, '')) - parseInt((systemInfo.diskFree || "0").replace(/\D/g, '')) 
+                            : 0
+                        } 
+                        max={systemInfo.diskSpace ? parseInt(systemInfo.diskSpace.replace(/\D/g, '')) : 100} 
+                        className="h-2 w-full bg-slate-200"
+                        indicatorClassName="bg-purple-500"
+                    />
+                </CardContent>
+            </Card>
         </div>
     );
 };

@@ -1,4 +1,5 @@
-import { Package, Loader } from "lucide-react";
+import { Package } from "lucide-react";
+import TableSkeletonLoader from "@/components/skeletons/TableSkeletonLoader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { useTranslation } from "react-i18next";
@@ -25,9 +26,7 @@ const AllAppsTab = () => {
                 <SelectedAppsActions />
 
                 {loading ? (
-                    <div className="flex items-center justify-center h-64">
-                        <Loader className="h-8 w-8 animate-spin text-primary" />
-                    </div>
+                    <TableSkeletonLoader rowCount={10} columnCount={5} />
                 ) : (
                     <DataTable
                         columns={columns}

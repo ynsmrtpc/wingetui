@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Download, Search, Loader, XCircle } from "lucide-react";
+import TableSkeletonLoader from "@/components/skeletons/TableSkeletonLoader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -110,9 +111,7 @@ const InstallTab = () => {
                 )}
 
                 {searchLoading ? (
-                    <div className="flex items-center justify-center h-64">
-                        <Loader className="h-8 w-8 animate-spin text-primary" />
-                    </div>
+                    <TableSkeletonLoader rowCount={10} columnCount={5} />
                 ) : (
                     <>
                         {searching && searchResults.length === 0 ? (

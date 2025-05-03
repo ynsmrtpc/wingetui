@@ -61,7 +61,14 @@
             "manage": "Manage your applications",
             "update": "Check for updates",
             "install": "Install new applications"
-        }
+        },
+        "performanceScore": "Performance Score",
+        "totalApps": "Total Applications",
+        "systemUsage": "System Usage",
+        "cpuUsage": "CPU Usage",
+        "memoryUsage": "Memory Usage",
+        "gpuUsage": "GPU Usage",
+        "networkUsage": "Network Usage"
     },
     "apps": {
         "title": "My Apps",
@@ -77,6 +84,8 @@
         "selectAll": "Select All",
         "selectApp": "Select App",
         "updateSelected": "Update Selected",
+        "uninstallError": "Uninstall Error",
+        "actions": "Uninstall",
         "appName": "App Name",
         "version": "Version",
         "newVersion": "New Version",
@@ -130,7 +139,13 @@
         "allInstalledApps": "All applications installed on your system and available in the Winget package manager are listed",
         "wingetNotAvailable": "Winget Not Available",
         "wingetMockDataWarning": "The winget command line tool is not available. The data shown is sample data. You can install winget from the Microsoft Store.",
-        "errorTitle": "Error Occurred"
+        "errorTitle": "Error Occurred",
+        "wingetNotInstalled": "Winget is not installed on your system",
+        "clickToInstallWinget": "Click here to install winget",
+        "installWinget": "Install Winget",
+        "installingWinget": "Installing Winget...",
+        "wingetInstallStarted": "Winget Installation Started",
+        "wingetInstallError": "Winget Installation Error"
     },
     "settings": {
         "title": "Settings",

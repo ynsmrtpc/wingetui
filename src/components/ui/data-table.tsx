@@ -184,21 +184,21 @@ export function DataTable<TData, TValue>({
                                             key={cell.id}
                                             className={`${cell.column.id === 'select' ? 'w-[30px] p-2' : 'max-w-96 w-full'}`}
                                         >
-                                            {cell.column.id !== 'select'
+                                            {cell.column.id === 'name' || cell.column.id === "version"|| cell.column.id === "newVersion"
                                                 ? (
                                                     <TooltipProvider>
                                                         <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <div className={`${cell.column.id === 'select' ? '' : 'truncate max-w-96'}`}>
+                                                            <TooltipTrigger >
+                                                                <div className='truncate max-w-96'>
                                                                     {flexRender(
                                                                         cell.column.columnDef.cell,
                                                                         cell.getContext()
                                                                     )}
                                                                 </div>
                                                             </TooltipTrigger>
-                                                            <TooltipContent>
+                                                            <TooltipContent >
                                                                 <span>
-                                                                    {String(cell.getValue() || "")}
+                                                                    {String(cell.getValue())}
                                                                 </span>
                                                             </TooltipContent>
                                                         </Tooltip>

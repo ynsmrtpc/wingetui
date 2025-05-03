@@ -17,8 +17,17 @@ export interface SystemInfoTypes {
     cpuSpeed?: string
     cpuCores?: number
     cpuThreads?: number
+    cpuUsage?: number
     ram: string
     freeRam?: string
+    memoryUsage?: number
+    gpu?: string
+    gpuVram?: string
+    gpuUsage?: number
+    networkInterface?: string
+    networkDownload?: number
+    networkUpload?: number
+    networkUsage?: number
     os: string
     version: string
     networkName?: string
@@ -27,4 +36,6 @@ export interface SystemInfoTypes {
     uptime?: string
     diskSpace?: string
     diskFree?: string
+    performanceScore?: number
+    totalApps?: number
 }
