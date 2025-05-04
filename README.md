@@ -42,7 +42,7 @@ WingetUI sayesinde, komut satırı kullanmadan Windows uygulamalarını yöneteb
 
 ## 📥 Kurulum
 
-1. En son sürümü [buradan](https://github.com/wingetui/releases) indirin
+1. En son sürümü [buradan](https://github.com/ynsmrtpc/wingetui/releases/) indirin
 2. İndirilen `.exe` dosyasını çalıştırın
 3. Uygulama otomatik olarak başlayacaktır
 
