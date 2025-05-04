@@ -4,7 +4,7 @@
   "appId": "com.wingetui.app",
   "asar": true,
   "productName": "WingetUI",
-  "icon": "public/icon.svg",
+  "icon": "https://yunusemretopcu.com/uploads/wingetui/icon.svg",
   "directories": {
     "output": "release"
   },

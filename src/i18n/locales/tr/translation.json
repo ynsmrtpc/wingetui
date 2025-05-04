@@ -96,7 +96,7 @@
         "noResults": "Sonuç bulunamadı",
         "installSuccess": "Seçilen uygulamalar başarıyla yüklendi",
         "installError": "Uygulamalar yüklenirken hata oluştu",
-        "installed": "Yüklendi",
+        "installed": "✔",
         "search": "Ara",
         "clearSearch": "Temizle",
         "searchResults": "Arama sonuçları",

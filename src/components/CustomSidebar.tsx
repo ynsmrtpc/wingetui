@@ -25,7 +25,7 @@ export function CustomSidebar({ children }: { children: ReactNode }) {
             <SidebarGroupContent className="flex items-center p-5 mb-2 bg-gradient-to-r from-primary/10 to-transparent rounded-md mx-1">
               <div className="flex items-center gap-3">
                 <div>
-                  <img src="/icon.svg" alt="logo" className="h-10 w-10"/>
+                  <img src="https://yunusemretopcu.com/uploads/wingetui/icon.svg" alt="logo" className="h-10 w-10"/>
                 </div>
                 <div>
                   <h3 className="font-bold text-xl text-primary tracking-tight">WingetUI</h3>

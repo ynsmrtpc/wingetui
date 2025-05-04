@@ -32,7 +32,7 @@ export async function getData(): Promise<{ data: AppInfo[], error?: string }> {
 // Seçilen uygulamaları güncelleyen fonksiyon
 export async function updateSelectedApps(selectedApps: AppInfo[]): Promise<{ success: boolean, results: any[] }> {
     try {
-        const results = [];
+        const results: Array<{id?: string, name?: string, success?: boolean, message?: string}> = [];
 
         // Tüm uygulamalar için isUpdating bayrağını true olarak ayarla
         selectedApps.forEach(app => {
@@ -161,7 +161,7 @@ export function markInstalledApps(searchResults: AppInfo[], installedApps: AppIn
 // Seçilen uygulamaları yükleyen fonksiyon
 export async function installSelectedApps(selectedApps: AppInfo[]): Promise<{ success: boolean, results: any[] }> {
     try {
-        const results = [];
+        const results: Array<{id?: string, name?: string, success?: boolean, message?: string}> = [];
 
         // Tüm uygulamalar için isInstalling bayrağını true olarak ayarla
         selectedApps.forEach(app => {

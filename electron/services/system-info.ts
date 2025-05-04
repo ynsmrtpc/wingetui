@@ -285,7 +285,8 @@ export class SystemInfoService {
       uptime: uptime,
       diskSpace: diskInfo.total,
       diskFree: diskInfo.free,
-      performanceScore: performanceScore
+      performanceScore: performanceScore,
+      totalApps: 0 // Default value, will be updated by IpcHandlerService
     }
   }
 } 

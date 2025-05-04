@@ -223,7 +223,7 @@ const Settings = () => {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-primary/10 rounded-full">
-                                        <img src="/icon.svg" alt="WingetUI" className="h-10 w-10" />
+                                        <img src="https://yunusemretopcu.com/uploads/wingetui/icon.svg" alt="WingetUI" className="h-10 w-10" />
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-bold">WingetUI</h3>

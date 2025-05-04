@@ -26,8 +26,8 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
-// Always use the icon from the public folder
-const iconPath = path.join(process.env.APP_ROOT, 'public', 'icon.svg')
+// Use the remote icon URL for the application
+const iconPath = 'https://yunusemretopcu.com/uploads/wingetui/icon.svg'
 
 let win: BrowserWindow | null
 
